@@ -4,22 +4,17 @@ import pandas as pd
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-# ========== 1. 设置镜像（仅本地环境使用） ==========
-if not os.environ.get("STREAMLIT_CLOUD"):
-    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-    print("🖥️  本地环境，使用镜像加速")
-else:
-    print("☁️  云端环境，使用官方 HuggingFace 源")
-
-# ========== 2. 检测是否在云端 ==========
+# ========== 1. 检测是否在云端 ==========
 if os.environ.get("STREAMLIT_CLOUD"):
     print("☁️  检测到 Streamlit Cloud 环境，加载已有向量库...")
     
+    # 加载嵌入模型（不设置镜像）
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-small-zh",
         cache_folder="./model_cache"
     )
     
+    # 加载已有向量库
     vector_db = Chroma(
         persist_directory="./vector_db",
         embedding_function=embeddings
@@ -30,6 +25,10 @@ if os.environ.get("STREAMLIT_CLOUD"):
 else:
     # ========== 本地构建向量库 ==========
     print("🖥️  本地环境，开始构建向量库...")
+
+    # 本地使用镜像加速
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    print("🖥️  本地环境，使用镜像加速")
 
     print("正在查找数据文件...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
