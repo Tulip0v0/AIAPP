@@ -4,20 +4,22 @@ import pandas as pd
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-# ========== 1. 设置镜像（解决下载问题） ==========
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# ========== 1. 设置镜像（仅本地环境使用） ==========
+if not os.environ.get("STREAMLIT_CLOUD"):
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    print("🖥️  本地环境，使用镜像加速")
+else:
+    print("☁️  云端环境，使用官方 HuggingFace 源")
 
 # ========== 2. 检测是否在云端 ==========
 if os.environ.get("STREAMLIT_CLOUD"):
     print("☁️  检测到 Streamlit Cloud 环境，加载已有向量库...")
     
-    # 加载嵌入模型
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-small-zh",
         cache_folder="./model_cache"
     )
     
-    # 加载已有向量库
     vector_db = Chroma(
         persist_directory="./vector_db",
         embedding_function=embeddings
@@ -29,14 +31,10 @@ else:
     # ========== 本地构建向量库 ==========
     print("🖥️  本地环境，开始构建向量库...")
 
-    # ========== 3. 智能查找数据文件 ==========
     print("正在查找数据文件...")
-
-    # 获取脚本所在目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
     print(f"脚本目录：{script_dir}")
 
-    # 尝试多个可能的路径
     possible_paths = [
         os.path.join(script_dir, "../data/campus_data.csv"),
         os.path.join(script_dir, "data/campus_data.csv"),
@@ -56,12 +54,10 @@ else:
 
     if csv_path is None:
         print("❌ 找不到数据文件，创建示例数据...")
-        # 创建数据目录
         data_dir = os.path.join(script_dir, "../data")
         os.makedirs(data_dir, exist_ok=True)
         csv_path = os.path.join(data_dir, "campus_data.csv")
         
-        # 创建示例数据
         sample_data = {
             'id': [1, 2, 3, 4, 5],
             'category': ['请假规则', '奖学金', '宿舍报修', '校园卡', '选课规则'],
@@ -84,7 +80,6 @@ else:
         df.to_csv(csv_path, index=False, encoding='utf-8-sig')
         print(f"✅ 已创建示例数据：{csv_path}")
 
-    # ========== 4. 加载数据 ==========
     print(f"\n正在加载数据...")
     try:
         df = pd.read_csv(csv_path, encoding='utf-8-sig')
@@ -97,7 +92,6 @@ else:
     print(f"✅ 加载了 {len(df)} 条记录")
     print(f"列名：{df.columns.tolist()}")
 
-    # ========== 5. 使用免费嵌入模型 ==========
     print("\n正在加载嵌入模型（首次运行会下载模型，请稍候）...")
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-small-zh",
@@ -105,11 +99,9 @@ else:
     )
     print("✅ 模型加载完成")
 
-    # ========== 6. 创建向量库 ==========
     print("\n正在构建向量库...")
     texts = df['answer'].tolist()
 
-    # 确保元数据包含必要字段
     metadatas = []
     for idx, row in df.iterrows():
         meta = {
@@ -119,7 +111,6 @@ else:
         }
         metadatas.append(meta)
 
-    # 创建向量库保存路径
     vector_db_path = os.path.join(script_dir, "../vector_db")
     os.makedirs(vector_db_path, exist_ok=True)
     print(f"向量库保存路径：{vector_db_path}")
@@ -134,14 +125,3 @@ else:
 
     print(f"\n✅ 已存入 {len(texts)} 条记录到向量库")
     print(f"✅ 向量库保存在：{os.path.abspath(vector_db_path)}")
-
-    # ========== 7. 测试查询 ==========
-    print("\n测试查询...")
-    test_query = "时间？"
-    results = vector_db.similarity_search(test_query, k=2)
-    print(f"查询：'{test_query}'")
-    for i, doc in enumerate(results):
-        print(f"\n结果 {i+1}：")
-        print(f"  内容：{doc.page_content[:100]}...")
-        print(f"  分类：{doc.metadata.get('category', '')}")
-        print(f"  问题：{doc.metadata.get('question', '')}")
