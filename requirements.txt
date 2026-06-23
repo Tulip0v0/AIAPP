@@ -4,3 +4,5 @@ python-dotenv
 langchain-community
 chromadb
 pandas
+sentence-transformers
+torch

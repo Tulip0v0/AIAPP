@@ -1,5 +1,14 @@
 import os
+import sys
 import pandas as pd
+
+# ========== 0. 云端部署跳过 ==========
+if os.environ.get("STREAMLIT_CLOUD"):
+    print("☁️  检测到 Streamlit Cloud 环境，跳过向量库构建")
+    print("💡 向量库会在首次运行时自动构建")
+    # 创建一个空的 vector_db 对象占位
+    vector_db = None
+    sys.exit(0)
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
